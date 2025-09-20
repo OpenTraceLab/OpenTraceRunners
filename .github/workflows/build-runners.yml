@@ -1,0 +1,69 @@
+name: Build OpenTrace CI Runners
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push Linux image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.linux
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/linux-builder:latest
+
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push Windows image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.windows
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/windows-builder:latest
+
+  macos-setup:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test macOS dependencies
+        run: |
+          brew install meson ninja pkg-config glib libusb python@3.11 qt6 libftdi libserialport libzip hidapi nettle
+          echo "macOS runner ready"
